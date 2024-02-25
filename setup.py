@@ -7,5 +7,6 @@ setup(
     install_requires=[
         'pyspark',
     ],
+    include_package_data=True,
     author='Luis Henrique'
 )
