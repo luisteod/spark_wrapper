@@ -1,1 +1,1 @@
-from .spark import SparkWrapper
+from .spark_wrapper import SparkWrapper
