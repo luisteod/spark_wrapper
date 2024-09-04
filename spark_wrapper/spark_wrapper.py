@@ -39,11 +39,11 @@ class SparkWrapper:
         )
         conf.set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
 
-        conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
-        conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "LEGACY")
-        conf.set("spark.sql.adaptive.enabled", "true")
-        conf.set("spark.sql.parquet.filterPushdown", "true")
-        conf.set("spark.sql.shuffle.partitions", "1000")
+        # conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
+        # conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "LEGACY")
+        # conf.set("spark.sql.adaptive.enabled", "true")
+        # conf.set("spark.sql.parquet.filterPushdown", "true")
+        # conf.set("spark.sql.shuffle.partitions", "1000")
 
         conf.set("spark.executor.cores", self.exec_cors)
         conf.set("spark.driver.cores", self.driver_cors)
