@@ -5,8 +5,6 @@ from pyspark.sql import SparkSession
 class SparkWrapper:
 
     session : SparkSession = None
-    s3_conf = None
-    pg_conf = None
 
     def __init__(
         self,
@@ -56,10 +54,15 @@ class SparkWrapper:
         conf.set("spark.memory.offHeap.enabled", "true")
         conf.set("spark.memory.offHeap.size", self.exec_memory_gb + "g")
 
+        conf.set("spark.hadoop.fs.s3a.access.key", self.s3_conf["access_key"])
+        conf.set("spark.hadoop.fs.s3a.secret.key", self.s3_conf["secret_key"])
+        conf.set("spark.hadoop.fs.s3a.endpoint", self.s3_conf["endpoint_url"])
+
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
         self.session = spark
         return spark
+
 
     def set_pg_conf(self, user, pwd, host, port, db):
 
@@ -80,10 +83,6 @@ class SparkWrapper:
             "secret_key": secret_key,
             "endpoint_url": endpoint_url,
         }
-
-        self.session.conf.set("spark.hadoop.fs.s3a.access.key", self.s3_conf["access_key"])
-        self.session.conf.set("spark.hadoop.fs.s3a.secret.key", self.s3_conf["secret_key"])
-        self.session.conf.set("spark.hadoop.fs.s3a.endpoint", self.s3_conf["endpoint_url"])
 
         return self
 
@@ -112,6 +111,30 @@ class SparkWrapper:
         ).save()
 
         return True
+
+    def read_pg(self, schema_table):
+
+        if self.pg_conf is None:
+            raise Exception("Postgres connection is not set")
+
+        jdbc_url = (
+            "jdbc:postgresql://"
+            + self.pg_conf["host"]
+            + ":"
+            + str(self.pg_conf["port"])
+            + "/"
+            + self.pg_conf["db"]
+        )
+
+        df = self.session.read.format("jdbc").option("url", jdbc_url).option(
+            "dbtable", schema_table
+        ).option("user", self.pg_conf["user"]).option(
+            "password", self.pg_conf["pwd"]
+        ).option(
+            "driver", "org.postgresql.Driver"
+        ).load()
+
+        return df
 
 
 if __name__ == "__main__":
