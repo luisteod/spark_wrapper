@@ -1,6 +1,8 @@
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
-
+import logging
+# Configure the logging system
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SparkWrapper:
 
@@ -8,36 +10,27 @@ class SparkWrapper:
 
     def __init__(
         self,
-        exec_cors=2,
-        driver_cors=2,
-        exec_memory_gb=4,
-        driver_memory_gb=4,
+        num_cors: int = 2,
+        memory_gb: int = 4,
     ):
-        self.driver_cors = driver_cors
-        self.driver_memory_gb = str(driver_memory_gb)
-        self.exec_cors = exec_cors
-        self.exec_memory_gb = str(exec_memory_gb)
+        self.driver_cors = num_cors
+        self.driver_memory_gb = str(memory_gb) + "g"
 
     def create_session(self) -> SparkSession:
 
-        conf = SparkConf().setAppName("App").setMaster("local[*]")
-        conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")           
+        conf = SparkConf().setAppName("App").setMaster(f"local[{self.driver_cors}]")
+
+        # conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")           
 
         conf.set("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         conf.set(
             "spark.jars.packages",
-            "io.delta:delta-spark_2.12:3.1.0,org.apache.hadoop:hadoop-aws:3.2.2,org.postgresql:postgresql:42.7.3",
+            "org.apache.hadoop:hadoop-aws:3.2.2,org.postgresql:postgresql:42.7.3",
         )
         conf.set(
             "spark.hadoop.fs.s3a.aws.credentials.provider",
             "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
         )
-
-        conf.set(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        )
-        conf.set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
 
         # conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
         # conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "LEGACY")
@@ -45,18 +38,23 @@ class SparkWrapper:
         # conf.set("spark.sql.parquet.filterPushdown", "true")
         # conf.set("spark.sql.shuffle.partitions", "1000")
 
-        conf.set("spark.executor.cores", self.exec_cors)
         conf.set("spark.driver.cores", self.driver_cors)
 
-        conf.set("spark.driver.memory", self.driver_memory_gb + "g")
-        conf.set("spark.executor.memory", self.exec_memory_gb + "g")
-        conf.set("spark.executor.pyspark.memory", self.exec_memory_gb + "g")
+        conf.set("spark.driver.memory", self.driver_memory_gb)
         conf.set("spark.memory.offHeap.enabled", "true")
-        conf.set("spark.memory.offHeap.size", self.exec_memory_gb + "g")
+        conf.set("spark.memory.offHeap.size", self.driver_memory_gb)
 
-        conf.set("spark.hadoop.fs.s3a.access.key", self.s3_conf["access_key"])
-        conf.set("spark.hadoop.fs.s3a.secret.key", self.s3_conf["secret_key"])
-        conf.set("spark.hadoop.fs.s3a.endpoint", self.s3_conf["endpoint_url"])
+        try:
+            conf.set("spark.hadoop.fs.s3a.access.key", self.s3_conf["access_key"])
+            conf.set("spark.hadoop.fs.s3a.secret.key", self.s3_conf["secret_key"])
+            conf.set("spark.hadoop.fs.s3a.endpoint", self.s3_conf["endpoint_url"])
+        except Exception as e:
+            logging.info("AWS S3 configuration not set")
+        
+        try: 
+            assert self.pg_conf is not None
+        except Exception as e:
+            logging.info("Postgres configuration not set")
 
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
 

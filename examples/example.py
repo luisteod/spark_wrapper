@@ -15,13 +15,13 @@ pg_port = os.getenv("PG_PORT")
 pg_db = os.getenv("PG_DB")
 
 #%%
-sw = SparkWrapper() \
+sw = SparkWrapper(num_cors=1, memory_gb=2) \
     .set_s3_conf(ak, sk, ep) \
     .set_pg_conf(pg_user, pg_pwd, pg_host, pg_port, pg_db) 
 
 spark = sw.create_session()
 #%%
-df = spark.read.parquet('s3a://drivalake/sites/bronze/whois/2024-05-24/')
+df = spark.read.parquet('s3a://drivalake/sites/silver/whois/brazil/')
 df.show()
 #%%
 #Postgres
